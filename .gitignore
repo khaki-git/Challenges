@@ -1,0 +1,26 @@
+# Build outputs
+bin/
+obj/
+
+# IDE files
+.vs/
+.idea/
+*.suo
+*.user
+*.userprefs
+
+# Rider & JetBrains project data
+.idea/
+*.sln.iml
+
+# Unity/BepInEx cache
+BepInEx/LogOutput.log
+BepInEx/Logs/
+BepInEx/cache/
+
+# OS cruft
+Thumbs.db
+.DS_Store
+*.swp
+*.tmp
+

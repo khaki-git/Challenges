@@ -1,0 +1,243 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+    <PropertyGroup>
+        <TargetFramework>net472</TargetFramework>
+        <LangVersion>7.3</LangVersion>
+        <Nullable>disable</Nullable>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+        <GameDir>/var/home/bazzite/.local/share/Steam/steamapps/common/PEAK</GameDir>
+        <ManagedDir>$(GameDir)/PEAK_Data/Managed</ManagedDir>
+        <BepInExDir>$(GameDir)/BepInEx</BepInExDir>
+        <PeakLibDir>/home/bazzite/Documents/peaklib</PeakLibDir>
+
+        <OutputType>Library</OutputType>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+        <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+        <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+        <NoWarn>$(NoWarn);NU1701;MSB3277</NoWarn>
+        <DefineConstants>TRACE;NETFRAMEWORK;BEPINEX</DefineConstants>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Reference Include="BepInEx">
+            <HintPath>$(BepInExDir)/core/BepInEx.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="0Harmony">
+            <HintPath>$(BepInExDir)/core/0Harmony.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+
+        <Reference Include="Assembly-CSharp">
+            <HintPath>$(ManagedDir)/Assembly-CSharp.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Assembly-CSharp-firstpass" Condition="Exists('$(ManagedDir)/Assembly-CSharp-firstpass.dll')">
+            <HintPath>$(ManagedDir)/Assembly-CSharp-firstpass.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="UnityEngine">
+            <HintPath>$(ManagedDir)/UnityEngine.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="UnityEngine.CoreModule">
+            <HintPath>$(ManagedDir)/UnityEngine.CoreModule.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="UnityEngine.UI">
+            <HintPath>$(ManagedDir)/UnityEngine.UI.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Reference Include="PhotonUnityNetworking">
+            <HintPath>$(ManagedDir)/PhotonUnityNetworking.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="PhotonUnityNetworking.Utilities">
+            <HintPath>$(ManagedDir)/PhotonUnityNetworking.Utilities.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="PhotonRealtime">
+            <HintPath>$(ManagedDir)/PhotonRealtime.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="PhotonChat">
+            <HintPath>$(ManagedDir)/PhotonChat.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Photon3Unity3D">
+            <HintPath>$(ManagedDir)/Photon3Unity3D.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="PhotonUnityNetworking.Demos">
+            <HintPath>$(ManagedDir)/PhotonUnityNetworking.Demos.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="PhotonVoice">
+            <HintPath>$(ManagedDir)/PhotonVoice.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="PhotonVoice.API">
+            <HintPath>$(ManagedDir)/PhotonVoice.API.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="PhotonVoice.PUN">
+            <HintPath>$(ManagedDir)/PhotonVoice.PUN.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="ExitGames.Client.Photon" Condition="Exists('$(ManagedDir)/ExitGames.Client.Photon.dll')">
+            <HintPath>$(ManagedDir)/ExitGames.Client.Photon.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Zorro.PhotonUtility" Condition="Exists('$(ManagedDir)/Zorro.PhotonUtility.dll')">
+            <HintPath>$(ManagedDir)/Zorro.PhotonUtility.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Reference Include="Zorro.Core.Runtime" Condition="Exists('$(ManagedDir)/Zorro.Core.Runtime.dll')">
+            <HintPath>$(ManagedDir)/Zorro.Core.Runtime.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Zorro.Settings.Runtime" Condition="Exists('$(ManagedDir)/Zorro.Settings.Runtime.dll')">
+            <HintPath>$(ManagedDir)/Zorro.Settings.Runtime.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Zorro.UI.Runtime" Condition="Exists('$(ManagedDir)/Zorro.UI.Runtime.dll')">
+            <HintPath>$(ManagedDir)/Zorro.UI.Runtime.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Zorro.ControllerSupport" Condition="Exists('$(ManagedDir)/Zorro.ControllerSupport.dll')">
+            <HintPath>$(ManagedDir)/Zorro.ControllerSupport.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Zorro.AutoLOD" Condition="Exists('$(ManagedDir)/Zorro.AutoLOD.dll')">
+            <HintPath>$(ManagedDir)/Zorro.AutoLOD.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Zorro.JiggleBones" Condition="Exists('$(ManagedDir)/Zorro.JiggleBones.dll')">
+            <HintPath>$(ManagedDir)/Zorro.JiggleBones.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Reference Include="Sirenix.OdinInspector" Condition="Exists('$(ManagedDir)/Sirenix.OdinInspector.dll')">
+            <HintPath>$(ManagedDir)/Sirenix.OdinInspector.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Sirenix.OdinInspector.Attributes" Condition="Exists('$(ManagedDir)/Sirenix.OdinInspector.Attributes.dll')">
+            <HintPath>$(ManagedDir)/Sirenix.OdinInspector.Attributes.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Sirenix.Serialization" Condition="Exists('$(ManagedDir)/Sirenix.Serialization.dll')">
+            <HintPath>$(ManagedDir)/Sirenix.Serialization.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Sirenix.Serialization.Config" Condition="Exists('$(ManagedDir)/Sirenix.Serialization.Config.dll')">
+            <HintPath>$(ManagedDir)/Sirenix.Serialization.Config.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Sirenix.Utilities" Condition="Exists('$(ManagedDir)/Sirenix.Utilities.dll')">
+            <HintPath>$(ManagedDir)/Sirenix.Utilities.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+
+        <Reference Include="Sirenix.OdinInspector" Condition="!Exists('$(ManagedDir)/Sirenix.OdinInspector.dll') and Exists('$(ManagedDir)/Plugins/Sirenix.OdinInspector.dll')">
+            <HintPath>$(ManagedDir)/Plugins/Sirenix.OdinInspector.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Sirenix.OdinInspector.Attributes" Condition="!Exists('$(ManagedDir)/Sirenix.OdinInspector.Attributes.dll') and Exists('$(ManagedDir)/Plugins/Sirenix.OdinInspector.Attributes.dll')">
+            <HintPath>$(ManagedDir)/Plugins/Sirenix.OdinInspector.Attributes.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Sirenix.Serialization" Condition="!Exists('$(ManagedDir)/Sirenix.Serialization.dll') and Exists('$(ManagedDir)/Plugins/Sirenix.Serialization.dll')">
+            <HintPath>$(ManagedDir)/Plugins/Sirenix.Serialization.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Sirenix.Serialization.Config" Condition="!Exists('$(ManagedDir)/Sirenix.Serialization.Config.dll') and Exists('$(ManagedDir)/Plugins/Sirenix.Serialization.Config.dll')">
+            <HintPath>$(ManagedDir)/Plugins/Sirenix.Serialization.Config.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Sirenix.Utilities" Condition="!Exists('$(ManagedDir)/Sirenix.Utilities.dll') and Exists('$(ManagedDir)/Plugins/Sirenix.Utilities.dll')">
+            <HintPath>$(ManagedDir)/Plugins/Sirenix.Utilities.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Reference Include="Newtonsoft.Json" Condition="Exists('$(ManagedDir)/Newtonsoft.Json.dll')">
+            <HintPath>$(ManagedDir)/Newtonsoft.Json.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="com.rlabrecque.steamworks.net" Condition="Exists('$(ManagedDir)/com.rlabrecque.steamworks.net.dll')">
+            <HintPath>$(ManagedDir)/com.rlabrecque.steamworks.net.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="DOTween" Condition="Exists('$(ManagedDir)/DOTween.dll')">
+            <HintPath>$(ManagedDir)/DOTween.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="DOTweenPro" Condition="Exists('$(ManagedDir)/DOTweenPro.dll')">
+            <HintPath>$(ManagedDir)/DOTweenPro.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="DemiLib" Condition="Exists('$(ManagedDir)/DemiLib.dll')">
+            <HintPath>$(ManagedDir)/DemiLib.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="Mono.Security" Condition="Exists('$(ManagedDir)/Mono.Security.dll')">
+            <HintPath>$(ManagedDir)/Mono.Security.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <Reference Include="PEAKLib" Condition="Exists('$(PeakLibDir)/PEAKLib.dll')">
+            <HintPath>$(PeakLibDir)/PEAKLib.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="com.github.PEAKModding.PEAKLib.Core" Condition="Exists('$(PeakLibDir)/com.github.PEAKModding.PEAKLib.Core.dll')">
+            <HintPath>$(PeakLibDir)/com.github.PEAKModding.PEAKLib.Core.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="com.github.PEAKModding.PEAKLib.Items" Condition="Exists('$(PeakLibDir)/com.github.PEAKModding.PEAKLib.Items.dll')">
+            <HintPath>$(PeakLibDir)/com.github.PEAKModding.PEAKLib.Items.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="com.github.PEAKModding.PEAKLib.Stats" Condition="Exists('$(PeakLibDir)/com.github.PEAKModding.PEAKLib.Stats.dll')">
+            <HintPath>$(PeakLibDir)/com.github.PEAKModding.PEAKLib.Stats.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="$(PeakLibDir)/PEAKLib.csproj" Condition="Exists('$(PeakLibDir)/PEAKLib.csproj')" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Reference Include="Unity.TextMeshPro" Condition="Exists('$(ManagedDir)/Unity.TextMeshPro.dll')">
+            <HintPath>$(ManagedDir)/Unity.TextMeshPro.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="UnityEngine.TextCoreModule" Condition="Exists('$(ManagedDir)/UnityEngine.TextCoreModule.dll')">
+            <HintPath>$(ManagedDir)/UnityEngine.TextCoreModule.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="UnityEngine.TextCoreTextEngineModule" Condition="Exists('$(ManagedDir)/UnityEngine.TextCoreTextEngineModule.dll')">
+            <HintPath>$(ManagedDir)/UnityEngine.TextCoreTextEngineModule.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+        <Reference Include="UnityEngine.TextRenderingModule" Condition="Exists('$(ManagedDir)/UnityEngine.TextRenderingModule.dll')">
+            <HintPath>$(ManagedDir)/UnityEngine.TextRenderingModule.dll</HintPath>
+            <Private>false</Private>
+        </Reference>
+    </ItemGroup>
+</Project>
