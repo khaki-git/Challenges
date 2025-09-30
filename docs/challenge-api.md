@@ -1,12 +1,33 @@
 # Challenge API Guide
 
-This document explains how to integrate external mods with the `Challenges` plugin that ships with the PEAK challenge kiosk. The goal is to walk through every step in detail: understanding the types, registering your own challenges, responding to player selections, and reacting to gameplay events. Follow each section sequentially if you are integrating for the first time.
+This document teaches you how to recreate one of the built-in challenges that ships with the `Challenges` plugin. By rebuilding the **Frostbite** scenario from scratch you will learn every API surface needed to mirror an existing challenge, verify that its helper scripts still run, and prepare the ground for your own variations later.
 
-## 1. Set Up Your Development Environment
-1. **Install PEAK and BepInEx.** Your development machine must have PEAK installed and BepInEx 5 configured so that the game loads managed plugins. The challenge kiosk relies on the same setup.
-2. **Obtain the Challenges source.** Clone or download the Challenges repository. Place it next to your own mod source so you can reference the public API when writing code.
-3. **Reference the compiled DLL.** After building or downloading `Challenges.dll`, copy it to your mod project and add it as a reference. In a `.csproj` file this typically looks like:
+## 1. What You'll Rebuild
+- Target challenge: **Frostbite** (`id: permasnow`).
+- Behaviour: forces The Alpines, keeps storms active, bumps the ascent to 5, and warns players about the required snowstorm mod.
+- Supporting helpers: `ChooseBiome` switches the biome, `SnowPatch` keeps storms alive. Reusing the original ID means those helpers keep working automatically.
 
+```csharp
+// Built-in reference (excerpt from BuiltinChallenges.cs)
+new Challenge(
+    "permasnow",
+    "Frostbite",
+    " - Ascent 5\n" +
+    " - It is always storming in The Alpines\n" +
+    " - It is always raining in The Tropics\n" +
+    " - The Alpines is forced\n" +
+    "PLEASE USE THE FAIR SNOWSTORMS MOD.",
+    ChallengeDifficulty.MEDIUMCORE,
+    ascentOverride: 5
+);
+```
+
+We will rebuild that definition inside a separate plugin, confirm the kiosk shows our copy, and watch the helper scripts fire when a climb begins.
+
+## 2. Prepare Your Environment
+1. **Install PEAK and BepInEx 5.** Launch the game once so BepInEx generates the folders.
+2. **Fetch the Challenges source or DLL.** You need the compiled `Challenges.dll` in your mod project so C# can see `ChallengesAPI` and the helper scripts.
+3. **Reference the assembly.** In your `.csproj` add:
    ```xml
    <ItemGroup>
      <Reference Include="Challenges">
@@ -14,14 +35,12 @@ This document explains how to integrate external mods with the `Challenges` plug
      </Reference>
    </ItemGroup>
    ```
+   Adjust the path to wherever the DLL lives on your machine.
+4. **Verify the reference.** Build your mod once. The compiler should resolve `Challenge`, `ChallengesAPI`, and `Challenges.ChallengeScripts.*`.
 
-4. **Verify the reference.** Build your project once. If the compiler finds `ChallengesAPI`, the reference is correctly configured. Fix any missing dependency errors before continuing.
+## 3. Understand the Core Types
 
-## 2. Understand the Core Types
-
-### 2.1 `Challenge`
-`Challenge` is a simple data container. The fields and properties are defined in [`ChallengesAPI.cs`](../ChallengesAPI.cs) and reproduced below for clarity:
-
+### 3.1 `Challenge`
 ```csharp
 public class Challenge
 {
@@ -34,215 +53,128 @@ public class Challenge
 }
 ```
 
-- `id` (read-only) is the unique identifier. Use lowercase strings with a prefix tied to your plugin (e.g. `myplugin_frozenpeak`). Once published, keep the ID stable so saved games and other mods can reference it reliably.
-- `title` appears as the primary label in the kiosk list and in the details panel.
-- `description` supports explicit line breaks (`\n`). Aim to list every gameplay rule so players know what will happen.
-- `difficulty` uses the `ChallengeDifficulty` enum: `LIGHT`, `EASY`, `MEDIUM`, `MEDIUMCORE`, `HARD`, `HARDCORE`.
-- `enabled` tracks whether players have activated the challenge for the current session. Do not set it manually—`ChallengesAPI` manages it.
-- `ascentOverride` is optional. When present, the UI sets `Ascents.currentAscent` to this value immediately after the challenge is selected.
+- `id` must stay stable. Reusing `permasnow` makes the built-in helpers treat your clone exactly like the original Frostbite entry.
+- `title` and `description` appear in the kiosk. Use `\n` for manual line breaks.
+- `difficulty` is the kiosk badge (`LIGHT`, `EASY`, `MEDIUM`, `MEDIUMCORE`, `HARD`, `HARDCORE`).
+- `enabled` is toggled by the kiosk—do not set it yourself.
+- `ascentOverride` changes the current ascent immediately after selection when it is not `null`.
 
-### 2.2 `ChallengesAPI`
-`ChallengesAPI` is a static helper class that exposes registration, selection, query, and event hooks. You will interact with it through the methods and events described in the following sections.
+### 3.2 `ChallengesAPI`
+Key members you will use while cloning Frostbite:
+- `RegisterChallenge(Challenge challenge)` — add or replace a challenge definition.
+- `SetSingularChallengeEnabled(string id)` — enable exactly one challenge for testing.
+- `IsChallengeEnabled(string id)` — check whether your clone is active.
+- `ChallengeListChanged` — event fired after registration or selection changes.
+- `SceneLoaded` — event fired after a Unity scene loads while any challenge is active.
 
-## 3. Register a Challenge
-
-Perform the following steps during your plugin startup (commonly inside `BaseUnityPlugin.Awake`).
-
-1. **Construct the challenge instance.** Create a `Challenge` object and fill in every field you care about.
-2. **Call `ChallengesAPI.RegisterChallenge`.** Pass the instance created in step 1.
-3. **Store the reference.** Keep a field pointing to the challenge object so you can read its `enabled` flag later without looking it up in the dictionary.
-4. **Test in-game.** Launch PEAK, open the challenge kiosk, and confirm that your challenge appears in the list.
-
-Example implementation:
+## 4. Mirror the Built-in Data
+Create a plugin that constructs a new `Challenge` instance using the same ID that the built-in version uses. When `RegisterChallenge` sees a duplicate ID it replaces the existing definition but preserves the `enabled` flag so the kiosk state is not lost.
 
 ```csharp
 using BepInEx;
 using Challenges;
 
-[BepInPlugin("com.yourname.climbvariants", "Climb Variants", "1.0.0")]
-public class ClimbVariantsPlugin : BaseUnityPlugin
+[BepInPlugin("com.example.frostbiteclone", "Frostbite Clone", "1.0.0")]
+public class FrostbiteClonePlugin : BaseUnityPlugin
 {
-    private Challenge _soloSprint;
+    private Challenge _frostbite;
 
     private void Awake()
     {
-        _soloSprint = new Challenge(
-            id: "climbvariants_solosprint",
-            title: "Solo Sprint",
-            description: "- Ascent 4\n- Double movement speed\n- Enemies deal extra damage",
-            difficulty: ChallengeDifficulty.MEDIUM,
-            ascentOverride: 4
+        _frostbite = BuildFrostbiteClone();
+        ChallengesAPI.RegisterChallenge(_frostbite);
+    }
+
+    private static Challenge BuildFrostbiteClone()
+    {
+        return new Challenge(
+            id: "permasnow", // match the built-in ID so helper scripts still recognise it
+            title: "Frostbite",
+            description: string.Join("\n", new[]
+            {
+                " - Ascent 5",
+                " - It is always storming in The Alpines",
+                " - It is always raining in The Tropics",
+                " - The Alpines is forced",
+                "PLEASE USE THE FAIR SNOWSTORMS MOD."
+            }),
+            difficulty: ChallengeDifficulty.MEDIUMCORE,
+            ascentOverride: 5
         );
-
-        ChallengesAPI.RegisterChallenge(_soloSprint);
     }
 }
 ```
 
-**Verification checklist:**
-- The BepInEx console should log that the `Challenges` plugin refreshed its UI when your challenge registers.
-- Opening the kiosk should show your challenge with the correct title and description.
-- Selecting the challenge should toggle the `enabled` field to `true` inside your stored reference after `SetSingularChallengeEnabled` runs.
+> **Tip:** keeping the `id` identical to the built-in entry means you do not have to recreate `ChooseBiome` or `SnowPatch`; they key off the ID and will now affect your clone.
 
-## 4. Respond to Player Selection Changes
+## 5. Confirm the Clone Works In-Game
+1. Build your mod and drop the DLL in `<PEAK>/BepInEx/plugins/` alongside `Challenges.dll`.
+2. Launch PEAK, interact with the challenge kiosk, and find **Frostbite** in the list.
+3. Open the details panel; the description and difficulty should match the built-in entry.
+4. Select the challenge and press **Go** to start a climb. The ascent should change to 5 immediately.
+5. Enter the level and observe the forced storm and biome swap. Because the ID matches, `SnowPatch` and `ChooseBiome` continue to run.
 
-Use the `ChallengesAPI.ChallengeListChanged` event when you need to update state as soon as the active challenge changes.
-
-1. **Subscribe during initialisation (e.g. in `OnEnable`).**
-2. **Unsubscribe in `OnDisable` or `OnDestroy`.** Prevent duplicate handlers when the plugin reloads.
-3. **Inspect the dictionary inside your handler.** Either use your cached `Challenge` reference or consult `ChallengesAPI.challenges` to see which challenges are currently enabled.
+## 6. Trace Helper Scripts and Scene Hooks
+If you want to confirm the helper scripts are firing, subscribe to `SceneLoaded`. The event runs after any gameplay scene loads while at least one challenge is enabled.
 
 ```csharp
 private void OnEnable()
 {
-    ChallengesAPI.ChallengeListChanged += HandleChallengeListChanged;
+    ChallengesAPI.SceneLoaded += HandleSceneLoaded;
 }
 
 private void OnDisable()
 {
-    ChallengesAPI.ChallengeListChanged -= HandleChallengeListChanged;
+    ChallengesAPI.SceneLoaded -= HandleSceneLoaded;
 }
 
-private void HandleChallengeListChanged()
+private void HandleSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
 {
-    if (_soloSprint != null && _soloSprint.enabled)
+    if (ChallengesAPI.IsChallengeEnabled("permasnow"))
     {
-        Logger.LogInfo("Solo Sprint is active.");
+        Logger.LogInfo($"Frostbite active in scene {scene.name}; helper patches should already be running.");
     }
 }
 ```
 
-## 5. Query Challenge State on Demand
+Because you reused the same ID, `Challenges.ChallengeScripts.SnowPatch` and `ChooseBiome` continue to listen for `permasnow` and apply the weather and biome changes without extra work.
 
-When you are inside gameplay logic (Harmony patches, MonoBehaviours, or gameplay systems), use these methods:
+## 7. Extending the Clone
+Once the clone behaves identically to the built-in challenge you can customise it safely.
+- **Change the description or difficulty** by mutating `_frostbite.description` or `_frostbite.difficulty` before registering it.
+- **Add extra effects** by listening to `SceneLoaded` and applying your own patches when `permasnow` is enabled.
+- **Replace helper behaviour** by creating your own script that checks `ChallengesAPI.IsChallengeEnabled("permasnow")` and performs new logic; the built-in helpers will coexist unless you disable them in your code.
 
-- `ChallengesAPI.IsChallengeEnabled("challenge_id")` → returns `true` if the given challenge is currently active.
-- `ChallengesAPI.IsOneOfTheseChallengesEnabled(new[] { "id_a", "id_b" })` → handy for shared logic.
-- `ChallengesAPI.IsHell` → `true` when the Hell challenge is active, meaning every registered challenge is forced on.
-
-Example Harmony postfix:
+Example: add a log line when storms start, while keeping existing helpers alive.
 
 ```csharp
-[HarmonyPatch(typeof(Character), nameof(Character.ApplyFallDamage))]
-public static class FallDamagePatch
+private void HandleSceneLoaded(UnityEngine.SceneManagement.Scene scene,
+    UnityEngine.SceneManagement.LoadSceneMode mode)
 {
-    public static void Prefix(Character __instance, ref float damage)
-    {
-        if (!ChallengesAPI.IsChallengeEnabled("climbvariants_solosprint"))
-        {
-            return;
-        }
+    if (!ChallengesAPI.IsChallengeEnabled("permasnow")) return;
 
-        damage *= 1.5f; // make falls harsher during Solo Sprint
-    }
+    Logger.LogInfo("Custom Frostbite tweak: adjusting loot tables.");
+    // TODO: implement your own gameplay adjustments here.
 }
 ```
 
-**Diagnostic tip:** When behaviour does not match expectations, print the result of `ChallengesAPI.IsChallengeEnabled` to the BepInEx console to confirm whether the challenge flag is set.
-
-## 6. React to Scene Loads for Challenge-Specific Logic
-
-`ChallengesAPI.SceneLoaded` mirrors `SceneManager.sceneLoaded` but only fires while any challenge is active (including Hell mode). This reduces unnecessary work when players opt out of challenges.
-
-1. **Subscribe/unsubscribe** exactly like in Section 4.
-2. **Check the scene name and the challenge state.** Apply your challenge-specific logic inside the handler.
-
-```csharp
-using UnityEngine.SceneManagement;
-
-private void OnEnable()
-{
-    ChallengesAPI.SceneLoaded += OnChallengeSceneLoaded;
-}
-
-private void OnDisable()
-{
-    ChallengesAPI.SceneLoaded -= OnChallengeSceneLoaded;
-}
-
-private void OnChallengeSceneLoaded(Scene scene, LoadSceneMode mode)
-{
-    if (!ChallengesAPI.IsChallengeEnabled("climbvariants_solosprint"))
-    {
-        return;
-    }
-
-    if (scene.name == "WilIsland")
-    {
-        Logger.LogInfo("Solo Sprint active on WilIsland – applying modifiers.");
-        // Add your gameplay changes here (spawn items, adjust weather, etc.).
-    }
-}
-```
-
-**Testing workflow:**
-- Launch a private lobby so you can reload quickly.
-- Activate your challenge via the kiosk, start a run, and watch the BepInEx console. Your handler should log the message when the scene loads.
-- Deactivate the challenge (or disable all challenges) and repeat. The handler should not log anything, confirming the guard clause works.
-
-## 7. Resetting Challenge State
-
-When your mod needs to clear the active selection—for example, after a custom flow completes—call `ChallengesAPI.DisableAllChallenges()`. This sets every challenge’s `enabled` flag to `false` and fires `ChallengeListChanged` once. Use sparingly: you normally rely on the kiosk to manage selection.
-
-## 8. Handling Hell Mode
-
-- The string constant `ChallengesAPI.HellChallengeId` equals `"hell"`.
-- When this challenge is selected, `ChallengesAPI.IsHell` becomes `true`, any query for an existing challenge returns `true`, and your change handlers run once per challenge because every `enabled` flag is set to `true`.
-- If your challenge should behave differently when Hell is active, check `ChallengesAPI.IsHell` first.
-
-Example:
-
-```csharp
-if (ChallengesAPI.IsHell)
-{
-    Logger.LogInfo("Hell mode active: enabling extreme tuning.");
-}
-else if (ChallengesAPI.IsChallengeEnabled("climbvariants_solosprint"))
-{
-    Logger.LogInfo("Solo Sprint only: apply moderate tuning.");
-}
-```
-
-## 9. Inspecting the Challenge Dictionary Safely
-
-`ChallengesAPI.challenges` is a `Dictionary<string, Challenge>` that contains every registered challenge. The dictionary is populated lazily from `_registeredChallenges`, so always ensure it is initialised before reading it:
-
-1. Call `ChallengesAPI.EnsureChallengesRegistered()` if you depend on the dictionary immediately after startup.
-2. Check for `null` and `Count > 0` before iterating.
-
-```csharp
-ChallengesAPI.EnsureChallengesRegistered();
-
-if (ChallengesAPI.challenges != null && ChallengesAPI.challenges.Count > 0)
-{
-    foreach (var pair in ChallengesAPI.challenges)
-    {
-        Logger.LogDebug($"Challenge {pair.Key}: enabled={pair.Value.enabled}");
-    }
-}
-```
-
-## 10. Troubleshooting Integration Issues
-
-- **Challenge never appears.** Ensure `ChallengesAPI.RegisterChallenge` runs (add a `Logger.LogInfo` right before the call). Verify that no exception occurs during plugin startup.
-- **Handlers fire multiple times.** Check that you unsubscribe in `OnDisable`. Each re-subscription without cleanup adds another callback.
-- **Scene handler never triggers.** Remember that `SceneLoaded` only fires when at least one challenge is active. Activate one through the kiosk or via `ChallengesAPI.SetSingularChallengeEnabled` in code before expecting callbacks.
-- **Enabled flag not persisting.** If you re-register the same challenge object every frame, the `enabled` flag might reset. Register once during initialisation and update the existing instance instead of constructing a new one repeatedly.
-
-## 11. Summary of Public Members
+## 8. Quick API Reference
 
 | Member | Purpose | When to Use |
 | --- | --- | --- |
-| `ChallengesAPI.RegisterChallenge(Challenge challenge)` | Adds or updates a challenge definition and notifies listeners. | During plugin initialisation. |
-| `ChallengesAPI.DisableAllChallenges()` | Clears the enabled flag on every challenge. | When forcing a reset outside the kiosk flow. |
-| `ChallengesAPI.SetSingularChallengeEnabled(string id)` | Enables one challenge (or Hell) and disables the rest. | To synchronise selection programmatically (e.g. from custom UI). |
-| `ChallengesAPI.IsChallengeEnabled(string id)` | Checks if a specific challenge is active. | Inside Harmony patches or gameplay scripts. |
-| `ChallengesAPI.IsOneOfTheseChallengesEnabled(string[] ids)` | Convenience method to test multiple IDs. | When several challenges share logic. |
-| `ChallengesAPI.ChallengeListChanged` | Event fired after registration or selection changes. | To refresh cached data or UI when the list updates. |
-| `ChallengesAPI.SceneLoaded` | Event fired after a scene loads while any challenge is active. | To apply scene-specific modifications. |
-| `ChallengesAPI.EnsureChallengesRegistered()` | Populates the challenge dictionary from cached registrations. | When you need to inspect `ChallengesAPI.challenges` immediately after startup. |
-| `ChallengesAPI.HellChallengeId` | Constant ID string for the Hell challenge. | To compare IDs safely. |
-| `ChallengesAPI.IsHell` | Global flag indicating Hell mode. | When tuning behaviour for the all-challenge scenario. |
-| `ChallengesAPI.challenges` | Public dictionary of registered challenges. | For diagnostic tools or advanced integrations. |
+| `ChallengesAPI.RegisterChallenge(Challenge challenge)` | Adds or replaces a challenge definition. | As soon as your plugin initialises. |
+| `ChallengesAPI.SetSingularChallengeEnabled(string id)` | Enables exactly one challenge (disables the rest). | For automated testing or custom UI. |
+| `ChallengesAPI.DisableAllChallenges()` | Clears the enabled flag on every challenge. | To reset state outside the kiosk flow. |
+| `ChallengesAPI.IsChallengeEnabled(string id)` | Checks if a challenge is active. | Inside patches to gate behaviour. |
+| `ChallengesAPI.IsOneOfTheseChallengesEnabled(string[] ids)` | Tests a set of IDs quickly. | When multiple challenges share logic. |
+| `ChallengesAPI.ChallengeListChanged` | Event fired after registrations or selections change. | To refresh cached state or UI. |
+| `ChallengesAPI.SceneLoaded` | Event fired after a scene loads while any challenge is active. | To apply scene-specific tweaks. |
+| `ChallengesAPI.HellChallengeId` / `ChallengesAPI.IsHell` | Utilities for the Hell mode catch-all challenge. | When adding logic that should treat Hell as special. |
 
-By following the sequential steps above, you can safely extend the challenge ecosystem, ensure your gameplay modifiers react to player selections, and keep your codebase in sync with the official kiosk workflow.
+## 9. Troubleshooting
+- **Frostbite disappears from the kiosk.** Ensure your plugin builds against the same `Challenges.dll` version that the game is running and that `RegisterChallenge` executes without exceptions.
+- **Helpers stop working.** Double-check the clone keeps the ID `permasnow`. If you change it, you must either update the helper scripts to look for the new ID or create your own equivalents.
+- **SceneLoaded never fires.** The event only hooks when at least one challenge is enabled. Use `ChallengesAPI.SetSingularChallengeEnabled("permasnow")` in a debug build to force activation before the kiosk runs.
+- **Description changes do not appear.** After modifying the definition, restart the game or trigger a challenge refresh by toggling the selection in the kiosk so the UI reloads the data.
+
+By mirroring a built-in challenge first, you can verify that your integration is solid before branching out into brand-new gameplay ideas. Once you are comfortable overriding and extending Frostbite, repeat the same pattern for the other built-ins (Instagib, Baggage Allowance, etc.)—the only differences are the IDs and the helper scripts each one uses.
