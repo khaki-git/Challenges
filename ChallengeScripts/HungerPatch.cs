@@ -1,4 +1,6 @@
+using System;
 using HarmonyLib;
+using UnityEngine.SceneManagement;
 
 namespace Challenges.ChallengeScripts
 {
@@ -10,7 +12,25 @@ namespace Challenges.ChallengeScripts
         {
             return ChallengesAPI.challenges != null
                    && ChallengesAPI.challenges.ContainsKey(HungerChallengeId)
-                   && ChallengesAPI.IsChallengeEnabled(HungerChallengeId);
+                   && ChallengesAPI.IsChallengeEnabled(HungerChallengeId)
+                   && IsInGameplayScene();
+        }
+
+        private static bool IsInGameplayScene()
+        {
+            var scene = SceneManager.GetActiveScene();
+            if (!scene.IsValid())
+            {
+                return false;
+            }
+
+            var name = scene.name ?? string.Empty;
+            if (string.Equals(name, "WilIsland", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return name.StartsWith("level_", StringComparison.OrdinalIgnoreCase);
         }
 
         [HarmonyPatch(typeof(Character), "CanRegenStamina")]

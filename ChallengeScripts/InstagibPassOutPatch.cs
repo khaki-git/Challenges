@@ -21,6 +21,20 @@ namespace Challenges.ChallengeScripts
                 return;
             }
 
+            var afflictions = __instance.refs?.afflictions;
+            if (afflictions != null)
+            {
+                float drowsy = afflictions.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.Drowsy);
+                if (drowsy > 0f)
+                {
+                    float injury = afflictions.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.Injury);
+                    if (injury - drowsy < 1f)
+                    {
+                        return;
+                    }
+                }
+            }
+
             PhotonView photonView = __instance.photonView;
             if (photonView == null || !photonView.IsMine)
             {

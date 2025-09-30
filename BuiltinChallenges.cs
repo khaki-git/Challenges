@@ -71,6 +71,16 @@ namespace Challenges
             );
             ChallengesAPI.RegisterChallenge(
                 new Challenge(
+                    "afflictionrandomizer",
+                    "Affliction Randomizer",
+                    " - Ascent 5\n" +
+                    " - Added statuses become random afflictions\n",
+                    ChallengeDifficulty.HARD,
+                    ascentOverride: 5
+                )
+            );
+            ChallengesAPI.RegisterChallenge(
+                new Challenge(
                     "scoutmasterlurks",
                     "Scoutmaster Lurks",
                     " - Ascent Tenderfoot (-1)\n" +
@@ -82,22 +92,23 @@ namespace Challenges
             );
             ChallengesAPI.RegisterChallenge(
                 new Challenge(
-                    "hell",
-                    "Hell",
-                    " - Ascent 1337\n" +
-                    " - All other challenges are enabled\n",
-                    ChallengeDifficulty.HARDCORE,
-                    ascentOverride: 1337
-                )
-            );
-            ChallengesAPI.RegisterChallenge(
-                new Challenge(
                     "planecrash",
                     "Plane Crash",
                     " - Ascent Tenderfoot (-1)\n" +
                     " - Start with 90% injury\n",
                     ChallengeDifficulty.LIGHT,
                     ascentOverride: -1
+                )
+            );
+            // hell always goes last
+            ChallengesAPI.RegisterChallenge(
+                new Challenge(
+                    "hell",
+                    "Hell",
+                    " - Ascent 1337\n" +
+                    " - All other challenges are enabled\n",
+                    ChallengeDifficulty.HARDCORE,
+                    ascentOverride: 1337
                 )
             );
 
