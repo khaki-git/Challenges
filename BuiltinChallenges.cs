@@ -4,6 +4,7 @@ namespace Challenges
 {
     public static class BuiltinChallenges
     {
+        public static int highestAscent = 7;
         public static void RegisterAll()
         {
             ChallengesAPI.RegisterChallenge(
@@ -105,10 +106,10 @@ namespace Challenges
                 new Challenge(
                     "hell",
                     "Hell",
-                    " - Ascent 1337\n" +
+                    $" - Ascent {highestAscent}\n" +
                     " - All other challenges are enabled\n",
                     ChallengeDifficulty.HARDCORE,
-                    ascentOverride: 1337
+                    ascentOverride: highestAscent
                 )
             );
 

@@ -112,13 +112,7 @@ public class ChallengeKiosk : MonoBehaviourPun, IInteractibleConstant, IInteract
 
     public void StartGame(int ascent)
     {
-        if (photonView == null)
-        {
-            Debug.LogWarning("ChallengeKiosk.StartGame called without a PhotonView instance.");
-            return;
-        }
-
-        photonView.RPC("LoadIslandMaster", RpcTarget.MasterClient, ascent);
+        ChallengeMultiplayerSync.RequestChallengeStart(ascent);
     }
 
     public void CancelCast(Character interactor) {}
@@ -132,33 +126,21 @@ public class ChallengeKiosk : MonoBehaviourPun, IInteractibleConstant, IInteract
     [PunRPC]
     public void LoadIslandMaster(int ascent)
     {
-        MenuWindow.CloseAllWindows();
+        if (!PhotonNetwork.IsMasterClient)
+            return;
 
-        if (PhotonNetwork.IsMasterClient)
-        {
-            Debug.Log("Loading scene as master.");
-            NextLevelService service = GameHandler.GetService<NextLevelService>();
-
-            string sceneName = "WilIsland";
-            if (service.Data.IsSome)
-            {
-                sceneName = SingletonAsset<MapBaker>.Instance.GetLevel(service.Data.Value.CurrentLevelIndex);
-            }
-            else if (PhotonNetwork.OfflineMode)
-            {
-                sceneName = SingletonAsset<MapBaker>.Instance.GetLevel(0);
-            }
-
-            if (string.IsNullOrEmpty(sceneName))
-                sceneName = "WilIsland";
-
-            photonView.RPC("BeginIslandLoadRPC", RpcTarget.All, sceneName, ascent);
-        }
+        ChallengeMultiplayerSync.HandleMasterStartRequest(ascent);
     }
 
     [PunRPC]
     public void BeginIslandLoadRPC(string sceneName, int ascent)
     {
+        BeginIslandLoad(sceneName, ascent);
+    }
+
+    internal static void BeginIslandLoad(string sceneName, int ascent)
+    {
+        MenuWindow.CloseAllWindows();
         GameHandler.AddStatus<SceneSwitchingStatus>(new SceneSwitchingStatus());
         Debug.Log("Begin scene load RPC: " + sceneName);
 
@@ -170,6 +152,26 @@ public class ChallengeKiosk : MonoBehaviourPun, IInteractibleConstant, IInteract
         IEnumerator loadProcess = LoadSceneProcess_Internal(loader, sceneName, networked: true, yieldForCharacterSpawn: true, delay: 0f);
 
         loader.Load(LoadingScreen.LoadingScreenType.Plane, null, loadProcess);
+    }
+
+    internal static string DetermineSceneName()
+    {
+        NextLevelService service = GameHandler.GetService<NextLevelService>();
+
+        string sceneName = "WilIsland";
+        if (service != null && service.Data.IsSome)
+        {
+            sceneName = SingletonAsset<MapBaker>.Instance.GetLevel(service.Data.Value.CurrentLevelIndex);
+        }
+        else if (PhotonNetwork.OfflineMode)
+        {
+            sceneName = SingletonAsset<MapBaker>.Instance.GetLevel(0);
+        }
+
+        if (string.IsNullOrEmpty(sceneName))
+            sceneName = "WilIsland";
+
+        return sceneName;
     }
 
     // -----------------------

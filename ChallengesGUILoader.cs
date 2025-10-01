@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +9,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using Zorro.Core;
+using Object = UnityEngine.Object;
 
 public static class ChallengesGUILoader
 {
@@ -23,6 +25,8 @@ public static class ChallengesGUILoader
     private static MenuWindow _menuWindow;
     private static Challenge _selectedChallenge;
     private static readonly List<ChallengeKiosk> _linkedKiosks = new List<ChallengeKiosk>();
+    private static bool _suppressSelectionBroadcast;
+    private static string _pendingSelectedChallengeId;
 
     private static int _page = 0;
     private static int _perPage = 5;
@@ -38,11 +42,15 @@ public static class ChallengesGUILoader
         ChallengesAPI.ChallengeListChanged -= OnChallengeListChanged;
         ChallengesAPI.ChallengeListChanged += OnChallengeListChanged;
 
+        ChallengeMultiplayerSync.Initialize();
+
         SceneManager.sceneLoaded += (scene, mode) =>
         {
             if (scene.name == "Airport")
             {
                 ChallengesAPI.DisableAllChallenges();
+                ClearSelection(false);
+                ChallengeMultiplayerSync.NotifyAirportLoaded();
                 CreateKiosk();
             }
         };
@@ -51,6 +59,8 @@ public static class ChallengesGUILoader
         if (activeScene.isLoaded && activeScene.name == "Airport")
         {
             ChallengesAPI.DisableAllChallenges();
+            ClearSelection(false);
+            ChallengeMultiplayerSync.NotifyAirportLoaded();
             CreateKiosk();
         }
     }
@@ -201,12 +211,22 @@ public static class ChallengesGUILoader
         {
             _selectedPanel = _menuInstance.transform.FindChildRecursive("SelectedChallenge")?.gameObject;
             Log($"Selected panel: {(_selectedPanel ? _selectedPanel.transform.GetHierarchyPath() : "null")}");
-            if (_selectedPanel && _selectedChallenge == null)
-                _selectedPanel.SetActive(false);
+            if (_selectedPanel)
+            {
+                if (_selectedChallenge == null)
+                {
+                    _selectedPanel.SetActive(false);
+                }
+                else
+                {
+                    RenderSelectedChallenge();
+                }
+            }
         }
 
         WireNavigationButtons();
         UpdateGoButtonState();
+        ApplyPendingSelectionIfNeeded();
 
         return _listRoot != null;
     }
@@ -414,41 +434,40 @@ public static class ChallengesGUILoader
 
         if (c.enabled && (_selectedChallenge == null || _selectedChallenge.id != c.id))
         {
-            SelectChallenge(c);
+            SelectChallenge(c, false);
         }
     }
 
-    private static void SelectChallenge(Challenge challenge)
+    private static void SelectChallenge(Challenge challenge, bool broadcast = true)
     {
-        if (_selectedPanel == null || challenge == null) return;
+        if (challenge == null)
+        {
+            ClearSelection(broadcast);
+            return;
+        }
+
+        var previousId = _selectedChallenge != null ? _selectedChallenge.id : null;
 
         _selectedChallenge = challenge;
+        _pendingSelectedChallengeId = challenge.id;
 
         if (challenge.ascentOverride.HasValue)
         {
             Ascents.currentAscent = challenge.ascentOverride.Value;
         }
 
-        _selectedPanel.SetActive(true);
-
-        var tTitle = _selectedPanel.transform.Find("Title");
-        var tSub = _selectedPanel.transform.Find("Subtext");
-        var tBody = _selectedPanel.transform.Find("Description")?.Find("Body");
-
-        var title = tTitle ? tTitle.GetComponent<TMP_Text>() : null;
-        var sub = tSub ? tSub.GetComponent<TMP_Text>() : null;
-        var body = tBody ? tBody.GetComponent<TMP_Text>() : null;
-
-        if (title != null) title.text = challenge.title;
-        if (sub != null)
-        {
-            sub.color = DifficultyColour(challenge.difficulty);
-            sub.text = challenge.difficulty.ToString();
-        }
-        if (body != null) body.text = challenge.description;
+        RenderSelectedChallenge();
 
         UpdateGoButtonState();
         Log($"Selected: {challenge.title} ({challenge.difficulty})");
+
+        if (!broadcast || _suppressSelectionBroadcast)
+            return;
+
+        if (!string.Equals(previousId, challenge.id, StringComparison.Ordinal))
+        {
+            ChallengeMultiplayerSync.BroadcastSelection(challenge);
+        }
     }
 
     private static void WireNavigationButtons()
@@ -484,11 +503,7 @@ public static class ChallengesGUILoader
         if (_menuInstance != null)
             _menuInstance.SetActive(false);
 
-        _selectedChallenge = null;
-        if (_selectedPanel != null)
-            _selectedPanel.SetActive(false);
-
-        UpdateGoButtonState();
+        ClearSelection(false);
     }
 
     private static void HandleGoPressed()
@@ -513,6 +528,70 @@ public static class ChallengesGUILoader
     {
         if (_goButton == null) return;
         _goButton.interactable = _selectedChallenge != null;
+    }
+
+    private static void RenderSelectedChallenge()
+    {
+        if (_selectedPanel == null)
+        {
+            return;
+        }
+
+        if (_selectedChallenge == null)
+        {
+            _selectedPanel.SetActive(false);
+            return;
+        }
+
+        _selectedPanel.SetActive(true);
+
+        var tTitle = _selectedPanel.transform.Find("Title");
+        var tSub = _selectedPanel.transform.Find("Subtext");
+        var tBody = _selectedPanel.transform.Find("Description")?.Find("Body");
+
+        var title = tTitle ? tTitle.GetComponent<TMP_Text>() : null;
+        var sub = tSub ? tSub.GetComponent<TMP_Text>() : null;
+        var body = tBody ? tBody.GetComponent<TMP_Text>() : null;
+
+        if (title != null) title.text = _selectedChallenge.title;
+        if (sub != null)
+        {
+            sub.color = DifficultyColour(_selectedChallenge.difficulty);
+            sub.text = _selectedChallenge.difficulty.ToString();
+        }
+        if (body != null) body.text = _selectedChallenge.description;
+    }
+
+    private static void ClearSelection(bool broadcast)
+    {
+        var hadSelection = _selectedChallenge != null;
+
+        _selectedChallenge = null;
+        _pendingSelectedChallengeId = null;
+
+        if (_selectedPanel != null)
+            _selectedPanel.SetActive(false);
+
+        UpdateGoButtonState();
+
+        if (hadSelection && broadcast && !_suppressSelectionBroadcast)
+        {
+            ChallengeMultiplayerSync.BroadcastSelection(null);
+        }
+    }
+
+    private static void ApplyPendingSelectionIfNeeded()
+    {
+        if (string.IsNullOrEmpty(_pendingSelectedChallengeId) || _selectedPanel == null)
+            return;
+
+        ChallengesAPI.EnsureChallengesRegistered();
+        if (ChallengesAPI.challenges != null && ChallengesAPI.challenges.TryGetValue(_pendingSelectedChallengeId, out var challenge))
+        {
+            ChallengesAPI.SetSingularChallengeEnabled(_pendingSelectedChallengeId);
+            SelectChallenge(challenge, false);
+            _pendingSelectedChallengeId = null;
+        }
     }
 
     private static void TrackKiosk(ChallengeKiosk kiosk)
@@ -561,6 +640,48 @@ public static class ChallengesGUILoader
     {
         var rt = _listRoot as RectTransform;
         if (rt != null) LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+    }
+
+    internal static void ApplyNetworkSelection(string challengeId, int? ascent)
+    {
+        bool previousSuppress = _suppressSelectionBroadcast;
+        _suppressSelectionBroadcast = true;
+
+        try
+        {
+            if (ascent.HasValue)
+            {
+                Ascents.currentAscent = ascent.Value;
+            }
+
+            var currentId = _selectedChallenge != null ? _selectedChallenge.id : null;
+            if (string.IsNullOrEmpty(challengeId))
+            {
+                ChallengesAPI.DisableAllChallenges();
+                ClearSelection(false);
+                return;
+            }
+
+            ChallengesAPI.EnsureChallengesRegistered();
+
+            if (ChallengesAPI.challenges != null && ChallengesAPI.challenges.TryGetValue(challengeId, out var challenge))
+            {
+                ChallengesAPI.SetSingularChallengeEnabled(challengeId);
+
+                if (!string.Equals(currentId, challengeId, StringComparison.Ordinal) || _selectedPanel == null)
+                {
+                    SelectChallenge(challenge, false);
+                }
+            }
+            else
+            {
+                _pendingSelectedChallengeId = challengeId;
+            }
+        }
+        finally
+        {
+            _suppressSelectionBroadcast = previousSuppress;
+        }
     }
 
     private static Color DifficultyColour(ChallengeDifficulty d)
