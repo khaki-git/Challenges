@@ -5,9 +5,10 @@ using Photon.Realtime;
 
 public static class ChallengeMultiplayerSync
 {
-    private const byte SelectionEventCode = 230;
-    private const byte StartRequestEventCode = 231;
-    private const byte StartConfirmedEventCode = 232;
+    // Photon reserves event codes >= 200 for internal use; keep ours well below that range.
+    private const byte SelectionEventCode = 101;
+    private const byte StartRequestEventCode = 102;
+    private const byte StartConfirmedEventCode = 103;
 
     private const string SelectedChallengeProp = "challenge.selected";
     private const string SelectedAscentProp = "challenge.ascent";

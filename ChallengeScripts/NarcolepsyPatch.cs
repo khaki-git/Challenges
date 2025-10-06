@@ -9,7 +9,7 @@ namespace Challenges.ChallengeScripts
     {
         private const string NarcolepsyChallengeId = "narcolepsy";
         private const float MinIntervalSeconds = 60f;
-        private const float MaxIntervalSeconds = 180f;
+        private const float MaxIntervalSeconds = 360f;
         private const float InstagibGracePeriod = 1f;
 
         private static readonly Dictionary<int, NarcolepsyState> States = new Dictionary<int, NarcolepsyState>();
@@ -95,12 +95,17 @@ namespace Challenges.ChallengeScripts
                 {
                     return;
                 }
-
-                float injuryStatus = __instance.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.Injury);
-                float remainderOfHealth = Mathf.Max(0f, 1f - injuryStatus);
-                float weightStatus = __instance.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.Weight);
-                float drowsyDamage = remainderOfHealth + weightStatus + 0.1f;
-                if (drowsyDamage > 0f)
+                
+                float remainderOfHealth = Mathf.Max(0f, 1f - (
+                    __instance.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.Injury)+
+                    __instance.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.Hunger)+
+                    __instance.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.Thorns)+
+                    __instance.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.Cold)+
+                    __instance.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.Hot)+
+                    __instance.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.Poison)
+                    ));
+                float drowsyDamage = remainderOfHealth + 0.1f;
+                if (drowsyDamage > 0f && __instance.GetCurrentStatus(CharacterAfflictions.STATUSTYPE.Drowsy) < 0.05f)
                 {
                     __instance.AddStatus(CharacterAfflictions.STATUSTYPE.Drowsy, drowsyDamage);
                 }

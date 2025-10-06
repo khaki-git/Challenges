@@ -101,6 +101,28 @@ namespace Challenges
                     ascentOverride: -1
                 )
             );
+            ChallengesAPI.RegisterChallenge(
+                new Challenge(
+                    "friendslop",
+                    "Friendslop",
+                    " - Ascent Tenderfoot (-1)\n" +
+                    " - Bonkables now fling at 5x their normal fling speed\n" +
+                    " - Bonkables now knock players out for 5 seconds\n" +
+                    " - All items are bonkable",
+                    ChallengeDifficulty.LIGHT,
+                    ascentOverride: -1
+                )
+            );
+            ChallengesAPI.RegisterChallenge(
+                new Challenge(
+                    "tuckered_out",
+                    "Tuckered Out",
+                    " - Ascent 2\n" +
+                    " - Carrying weight makes you drowsy",
+                    ChallengeDifficulty.MEDIUM,
+                    ascentOverride: 2
+                )
+            );
             // hell always goes last
             ChallengesAPI.RegisterChallenge(
                 new Challenge(

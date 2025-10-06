@@ -14,7 +14,9 @@ public class ChallengesPlugin : BaseUnityPlugin
         {
             var challenges = bundle.LoadAsset<GameObject>("Challenges");
             var challenge = bundle.LoadAsset<GameObject>("Challenge");
+            var warning = bundle.LoadAsset<GameObject>("DXWarning");
             
+            DXWarning.Init(warning);
             ChallengesGUILoader.Load(challenges, challenge);
             BuiltinChallenges.RegisterAll();
         });
